@@ -27,7 +27,7 @@ public class GithubProvider {
                 .build();
 
         RequestBody body = RequestBody.create(JSON.toJSONString(accessTokenDTO), json);
-        System.out.println(JSON.toJSONString(accessTokenDTO));
+//        System.out.println(JSON.toJSONString(accessTokenDTO));
             Request request = new Request.Builder()
                     .url("https://github.com/login/oauth/access_token")
                     .post(body)
@@ -43,7 +43,11 @@ public class GithubProvider {
     }
 
     public GithubUser getUser(String accesstoken){
-        OkHttpClient client = new OkHttpClient();
+        OkHttpClient client = new OkHttpClient.Builder()
+                .connectTimeout(60, TimeUnit.SECONDS)
+                .writeTimeout(60, TimeUnit.SECONDS)
+                .readTimeout(30, TimeUnit.SECONDS)
+                .build();
         String accessToken="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";
         Request request = new Request.Builder()
                 .url("https://api.github.com/user")
@@ -51,8 +55,9 @@ public class GithubProvider {
                 .build();
 
         try (Response response = client.newCall(request).execute()) {
-            String string=response.body().toString();
-            GithubUser githubUser = JSON.parseObject(string, GithubUser.class);
+            String string=response.body().string();
+            System.out.println(string);
+            GithubUser githubUser = JSON.parseObject(string,GithubUser.class);
             return githubUser;
 
         } catch (IOException e) {
