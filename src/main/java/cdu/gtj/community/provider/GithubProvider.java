@@ -3,12 +3,17 @@ package cdu.gtj.community.provider;
 import cdu.gtj.community.dto.AccessTokenDTO;
 import cdu.gtj.community.dto.GithubUser;
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
 import okhttp3.*;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
+
+import static java.lang.String.valueOf;
 
 /**
  * 功能描述
@@ -25,38 +30,43 @@ public class GithubProvider {
                 .writeTimeout(60, TimeUnit.SECONDS)
                 .readTimeout(30, TimeUnit.SECONDS)
                 .build();
-
-        RequestBody body = RequestBody.create(JSON.toJSONString(accessTokenDTO), json);
+        String grant_type="authorization_code";
+        JSONObject jsonObject=new JSONObject();
+        jsonObject.put("grant_type",grant_type);
+        jsonObject.putAll((Map<? extends String, ?>) JSONObject.toJSON(accessTokenDTO));
+        RequestBody body = RequestBody.create(jsonObject.toJSONString(), json);
 //        System.out.println(JSON.toJSONString(accessTokenDTO));
             Request request = new Request.Builder()
-                    .url("https://github.com/login/oauth/access_token")
+                    .url("https://gitee.com/oauth/token")
                     .post(body)
                     .build();
         try (Response response = client.newCall(request).execute()) {
             String str=response.body().string();
-//                System.out.println(str);
-                return str;
+            String accessToken=str.split(",")[0].split(":")[1].split("\"")[1];
+            System.out.println(str);
+                return accessToken;
 //                return null;
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
     }
 
-    public GithubUser getUser(String accesstoken){
+    @Value("${gitee.userdata.api}")
+    String userDataApi;
+    public GithubUser getUser(String accessToken){
         OkHttpClient client = new OkHttpClient.Builder()
                 .connectTimeout(60, TimeUnit.SECONDS)
                 .writeTimeout(60, TimeUnit.SECONDS)
                 .readTimeout(30, TimeUnit.SECONDS)
                 .build();
-        String accessToken="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";
-        Request request = new Request.Builder()
-                .url("https://api.github.com/user")
-                .header("Authorization","token "+accessToken)
-                .build();
+            String  strRequestUri=userDataApi+"?access_token="+accessToken;
+        System.out.println(strRequestUri);
+            Request request = new Request.Builder()
+                    .url(strRequestUri)
+                    .build();
 
-        try (Response response = client.newCall(request).execute()) {
+            try (Response response = client.newCall(request).execute()) {
             String string=response.body().string();
-            System.out.println(string);
             GithubUser githubUser = JSON.parseObject(string,GithubUser.class);
             return githubUser;
 

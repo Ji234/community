@@ -5,6 +5,7 @@ import cdu.gtj.community.dto.GithubUser;
 import cdu.gtj.community.mapper.UserMapper;
 import cdu.gtj.community.model.User;
 import cdu.gtj.community.provider.GithubProvider;
+import org.apache.ibatis.javassist.expr.NewArray;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
@@ -13,7 +14,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.net.http.HttpResponse;
 import java.util.UUID;
 
 /**
@@ -26,13 +30,13 @@ import java.util.UUID;
 @Controller
 public class AuthorizeController {
 
-    @Value("${github.client.id}")
+    @Value("${gitee.client.id}")
     private String clientId;
 
-    @Value("${github.client.secret}")
+    @Value("${gitee.client.secret}")
     private String clientSecret;
 
-    @Value("${github.redirect.uri}")
+    @Value("${gitee.redirect.uri}")
     private String redirectUri;
     @Autowired
     private GithubProvider githubProvider;
@@ -40,23 +44,22 @@ public class AuthorizeController {
     private UserMapper userMapper;
     @RequestMapping("/callback")
     public String callback(@RequestParam(name = "code")String code,
-                           @RequestParam(name = "state")String state ,
-                           HttpServletRequest request) {
+                           HttpServletRequest request , HttpServletResponse response) {
         AccessTokenDTO accessTokenDTO = new AccessTokenDTO();
         //init
         accessTokenDTO.setCode(code);
         accessTokenDTO.setClient_id(clientId);
         accessTokenDTO.setRedirect_uri(redirectUri);
         accessTokenDTO.setClient_secret(clientSecret);
-        accessTokenDTO.setState(state);
-        String str = githubProvider.getAccess(accessTokenDTO);
-        GithubUser githubUser = githubProvider.getUser(str);
+        String accessToken = githubProvider.getAccess(accessTokenDTO);
+        GithubUser githubUser = githubProvider.getUser(accessToken);
 
         if (githubUser != null) {
             User user = new User();
 
+            String token =UUID.randomUUID().toString();
             //init
-            user.setToken(UUID.randomUUID().toString());
+            user.setToken(token);
             user.setName(githubUser.getName());
             user.setAccountId(githubUser.getId().toString());
             user.setGmtCreat(System.currentTimeMillis());
@@ -64,6 +67,8 @@ public class AuthorizeController {
             userMapper.inster(user);
             //login success write session and cookie
             request.getSession().setAttribute("user", githubUser);
+
+            response.addCookie(new Cookie("token",token));
             return "redirect:index";
         } else {
             //login error ,login again

@@ -40,7 +40,7 @@
                     </ul>
                 </li>
                 <li th:unless="${session.user}">
-                    <a href="https://github.com/login/oauth/authorize?client_id=Iv1.52071d7af0c21eae&state=1">登录</a>
+                    <a th:href="@{${authorize_uri}+'client_id='+${client_id}+'&redirect_uri='+${redirct_uri}+'&response_type=code'}">登录</a>
                 </li>
             </ul>
         </div><!-- /.navbar-collapse -->
